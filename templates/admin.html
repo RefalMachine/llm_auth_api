@@ -37,8 +37,19 @@
   button.btn-green { background: var(--green); }
   button.btn-small { padding: 3px 10px; font-size: 12px; }
   .actions { display: flex; gap: 4px; }
-  .key-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis;
-              white-space: nowrap; font-family: monospace; font-size: 11px; }
+  .key-content { display: flex; align-items: center; gap: 8px; width: 180px; }
+  .key-preview { min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 white-space: nowrap; font-family: monospace; font-size: 11px; }
+  .copy-key { flex-shrink: 0; }
+  .mobile-copy-key { display: none; }
+  @media (max-width: 640px) {
+    body { padding: 12px; }
+    .card { padding: 8px; }
+    .mobile-copy-key { display: block; margin-top: 6px; }
+    button.copy-key { min-height: 44px; min-width: 44px; }
+    .key-content { flex-direction: column; align-items: flex-start; width: 130px; }
+    .key-preview { max-width: 100%; }
+  }
   .stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
   .stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
           padding: 12px 20px; min-width: 140px; }
@@ -142,8 +153,16 @@
 {% for u in users %}
 <tr data-id="{{ u.id }}">
   <td>{{ u.id }}</td>
-  <td><input type="text" value="{{ u.user_name }}" data-field="user_name" style="width:120px"></td>
-  <td class="key-cell"><span title="{{ u.user_key }}">{{ u.user_key[:16] }}...</span> <button class="btn-small" onclick="copyKey('{{ u.user_key }}', this)" title="Copy full key">Copy</button></td>
+  <td>
+    <input type="text" value="{{ u.user_name }}" data-field="user_name" style="width:120px">
+    <button type="button" class="btn-small copy-key mobile-copy-key" data-key="{{ u.user_key|e }}" onclick="copyKey(this.dataset.key, this)" title="Copy full key">Copy key</button>
+  </td>
+  <td class="key-cell">
+    <div class="key-content">
+      <span class="key-preview" title="{{ u.user_key|e }}">{{ u.user_key[:16]|e }}...</span>
+      <button type="button" class="btn-small copy-key" data-key="{{ u.user_key|e }}" onclick="copyKey(this.dataset.key, this)" title="Copy full key">Copy</button>
+    </div>
+  </td>
   <td><input type="number" value="{{ u.priority }}" data-field="priority" style="width:60px" min="0" max="10"></td>
   <td>
     {% if u.is_active %}
@@ -289,22 +308,55 @@ function flash(msg, ok) {
   setTimeout(() => el.innerHTML = '', 3500);
 }
 
-function copyKey(key, btn) {
-  navigator.clipboard.writeText(key).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = orig, 1500);
-  }).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = key;
-    document.body.appendChild(ta);
+function copyKeyFallback(key) {
+  const previousFocus = document.activeElement;
+  const ta = document.createElement('textarea');
+  ta.value = key;
+  ta.readOnly = true;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px;';
+  document.body.appendChild(ta);
+  try {
+    ta.focus({preventScroll: true});
     ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = orig, 1500);
-  });
+    ta.setSelectionRange(0, ta.value.length);
+    return document.execCommand('copy');
+  } finally {
+    ta.remove();
+    if (previousFocus) previousFocus.focus({preventScroll: true});
+  }
+}
+
+async function copyKey(key, btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  let copied = false;
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(key);
+      copied = true;
+    }
+  } catch (_) {
+    // The browser may deny clipboard access even when the API exists.
+  }
+  if (!copied) {
+    try {
+      copied = copyKeyFallback(key);
+    } catch (_) {
+      // Some browsers also block the legacy copy command.
+    }
+  }
+  if (!copied) {
+    btn.disabled = false;
+    flash('Could not copy automatically. Copy the key from the dialog.', false);
+    window.prompt('Copy this API key manually:', key);
+    return;
+  }
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }, 1500);
 }
 
 let availableModels = [];
