@@ -1,6 +1,6 @@
 services:
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:4.2.9
     container_name: llm_auth_rabbitmq
     restart: unless-stopped
     environment:

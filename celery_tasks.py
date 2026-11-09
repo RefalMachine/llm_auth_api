@@ -33,7 +33,7 @@ celery_app.conf.worker_prefetch_multiplier = 1
 celery_app.conf.update(
     timezone='GMT',
 )
-celery_app.control.rate_limit('celery_tasks.send_vllm_request', '1000/s')
+celery_app.control.rate_limit('celery_tasks.send_vllm_request', '10000/s')
 
 logger = logging.getLogger(__name__)
 

@@ -57,7 +57,7 @@ def get_vllm_docker_spawn_args(config: VllmConfig, ports, API_KEY, docker_name =
     return args
 
 def get_vllm_docker_spawn_args_experimental(*args, **kwargs):
-    return get_vllm_docker_spawn_args(*args, **kwargs, docker_name = "vllm/vllm-openai:nightly")
+    return get_vllm_docker_spawn_args(*args, **kwargs, docker_name = "vllm/vllm-openai:v0.29.0-cu129")
 
 spawner_scripts = {
     "vllm_default": get_vllm_docker_spawn_args,

@@ -1,0 +1,47 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.2.9
+    container_name: llm_auth_rabbitmq
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit consumer_timeout 36000000
+    ports:
+      - "5672:5672"
+
+  redis:
+    image: redis:latest
+    container_name: llm_auth_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  main:
+    build: ./docker_manager
+    container_name: llm_auth_main
+    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+      - redis
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    network_mode: host
+    volumes:
+      - .:/workdir
+      - /run/user/1002/docker.sock:/var/run/docker.sock
+    working_dir: /workdir
+    command: python run_api.py
+
+volumes:
+  redis_data:

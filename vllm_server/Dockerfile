@@ -30,5 +30,5 @@ RUN pip install torch-c-dlpack-ext
 RUN apt-get install python-is-python3
 
 COPY ./runner.sh /workdir/
-
+RUN chmod 0755 /workdir/runner.sh
 ENTRYPOINT ["./runner.sh"]

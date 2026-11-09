@@ -1,6 +1,7 @@
 
 import json
 import logging
+from pathlib import Path
 from functools import lru_cache
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import create_engine, Integer, String, Text, MetaData, func, event
@@ -67,6 +68,7 @@ class ContainerKey(Base):
 
 class Database:
     def __init__(self, db_path: str):
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.engine = create_engine(f"sqlite:///{db_path}?charset=utf8")
         self._run_migrations()
         Base.metadata.create_all(self.engine)
